@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class Tree {
 	Node root = new Node();
@@ -88,7 +91,7 @@ public class Tree {
 		for (int i = 0; i < node.children.size(); i++) {
 			leftmost(node.children.get(i));
 		}
-		if (node.children.size() == 0) {
+		if (node.children.isEmpty()) {
 			node.leftmost = node;
 		} else {
 			node.leftmost = node.children.get(0).leftmost;
@@ -100,8 +103,9 @@ public class Tree {
 		for (int i = 0; i < l.size(); i++) {
 			int flag = 0;
 			for (int j = i + 1; j < l.size(); j++) {
-				if (l.get(j) == l.get(i)) {
+				if (l.get(j).equals(l.get(i))) {
 					flag = 1;
+					break;
 				}
 			}
 			if (flag == 0) {
@@ -111,6 +115,8 @@ public class Tree {
 	}
 
 	static int[][] TD;
+	static int[][] forestdist;
+	static List<Pair<Integer, Integer>> changed = new ArrayList<>();
 
 	public static int ZhangShasha(Tree tree1, Tree tree2) {
 		tree1.index();
@@ -130,11 +136,16 @@ public class Tree {
 		// space complexity of the algorithm
 		TD = new int[l1.size() + 1][l2.size() + 1];
 
+		int maxKeyroot1 = Collections.max(keyroots1) + 1;
+		int maxKeyroot2 = Collections.max(keyroots2) + 1;
+		forestdist = new int[maxKeyroot1][maxKeyroot2];
+
 		// solve subproblems
 		for (int i1 = 1; i1 < keyroots1.size() + 1; i1++) {
 			for (int j1 = 1; j1 < keyroots2.size() + 1; j1++) {
 				int i = keyroots1.get(i1 - 1);
 				int j = keyroots2.get(j1 - 1);
+				changed.clear();
 				TD[i][j] = treedist(l1, l2, i, j, tree1, tree2);
 			}
 		}
@@ -143,7 +154,10 @@ public class Tree {
 	}
 
 	private static int treedist(ArrayList<Integer> l1, ArrayList<Integer> l2, int i, int j, Tree tree1, Tree tree2) {
-		int[][] forestdist = new int[i + 1][j + 1];
+		for (Pair<Integer, Integer> index : changed) {
+			forestdist[index.getFirst()][index.getSecond()] = 0;
+		}
+		changed.clear();
 
 		// costs of the three atomic operations
 		int Delete = 1;
@@ -153,21 +167,24 @@ public class Tree {
 		forestdist[0][0] = 0;
 		for (int i1 = l1.get(i - 1); i1 <= i; i1++) {
 			forestdist[i1][0] = forestdist[i1 - 1][0] + Delete;
+			changed.add(new Pair<>(i1, 0));
 		}
 		for (int j1 = l2.get(j - 1); j1 <= j; j1++) {
 			forestdist[0][j1] = forestdist[0][j1 - 1] + Insert;
+			changed.add(new Pair<>(0, j1));
 		}
 		for (int i1 = l1.get(i - 1); i1 <= i; i1++) {
 			for (int j1 = l2.get(j - 1); j1 <= j; j1++) {
 				int i_temp = (l1.get(i - 1) > i1 - 1) ? 0 : i1 - 1;
 				int j_temp = (l2.get(j - 1) > j1 - 1) ? 0 : j1 - 1;
-				if ((l1.get(i1 - 1) == l1.get(i - 1)) && (l2.get(j1 - 1) == l2.get(j - 1))) {
+				if ((l1.get(i1 - 1).equals(l1.get(i - 1))) && (l2.get(j1 - 1).equals(l2.get(j - 1)))) {
 
 					int Cost = (tree1.labels.get(i1 - 1).equals(tree2.labels.get(j1 - 1))) ? 0 : Relabel;
 					forestdist[i1][j1] = Math.min(
 							Math.min(forestdist[i_temp][j1] + Delete, forestdist[i1][j_temp] + Insert),
 							forestdist[i_temp][j_temp] + Cost);
 					TD[i1][j1] = forestdist[i1][j1];
+					changed.add(new Pair<>(i1, j1));
 				} else {
 					int i1_temp = l1.get(i1 - 1) - 1;
 					int j1_temp = l2.get(j1 - 1) - 1;
@@ -178,6 +195,7 @@ public class Tree {
 					forestdist[i1][j1] = Math.min(
 							Math.min(forestdist[i_temp][j1] + Delete, forestdist[i1][j_temp] + Insert),
 							forestdist[i_temp2][j_temp2] + TD[i1][j1]);
+					changed.add(new Pair<>(i1, j1));
 				}
 			}
 		}
